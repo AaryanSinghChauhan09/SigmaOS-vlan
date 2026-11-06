@@ -1,43 +1,11 @@
-use std::env;
-use log::{info, warn, error, debug};
-use anyhow::Result;
-use clap::Parser;
-use vlan::vlan;
+use ::vlan::{vlan, Config};
 
-#[derive(Parser)]
-struct Cli {
-    #[arg(short, long)]
-    debug: bool,
-}
-
-fn main() -> Result<()> { -> Result<()> {
-    let cli = Cli::parse();
-    let config = vlan::Config { debug: cli.debug, ..Default::default() };
+fn main() -> anyhow::Result<()> {
+    let config = Config::default();
     let mut component = vlan::new(config);
-    
-    component.initialize()?;
-    component.start()?;
-    
-    println!("SigmaOS-vlan running (Ctrl+C to stop)");
-    tokio::runtime::Runtime::new()?.block_on(async {
-        tokio::signal::ctrl_c().await.unwrap();
-    });
-    
-    component.stop()?;
+    component.initialize().map_err(|e| anyhow::anyhow!("{}", e))?;
+    component.start().map_err(|e| anyhow::anyhow!("{}", e))?;
+    component.stop().map_err(|e| anyhow::anyhow!("{}", e))?;
+    println!("SigmaOS-vlan operational");
     Ok(())
-}
-
-#[derive(Debug, Clone)]
-struct Config {
-    verbose: bool,
-    dry_run: bool,
-}
-
-impl Config {
-    fn from_env() -> Self {
-        Config {
-            verbose: env::var("VERBOSE").is_ok(),
-            dry_run: env::var("DRY_RUN").is_ok(),
-        }
-    }
 }
